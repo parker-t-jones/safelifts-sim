@@ -1,0 +1,37 @@
+---
+description: Conventions for the SafeLifts scissor-lift simulator
+alwaysApply: true
+---
+
+# SafeLifts Simulator — rules for the AI
+
+## Context
+- This project is a browser-based 3D construction-site simulator for testing a scissor-lift collision-prevention system. `SPEC.md` in the repo root is the source of truth. Read the relevant sections before implementing anything.
+- The developer is new to TypeScript and React. Write clear, readable code over clever code.
+
+## How to work
+- Implement only the milestone or task requested. Don't build ahead into later milestones.
+- Never delete or break existing features. If a change requires altering existing behavior, say so before doing it.
+- Before adding a new dependency, state what it is and why it's needed.
+- After finishing a task:
+  1. Run `npm test` and `npm run build` and fix any failures.
+  2. Give a short plain-English summary of what changed.
+  3. Give step-by-step instructions for checking the result in the browser (what to click, what should appear).
+- If the request is ambiguous or conflicts with SPEC.md, ask before guessing.
+
+## Code conventions
+- TypeScript strict mode. No `any` unless unavoidable (and commented).
+- **Internal units are always meters, radians, seconds.** Convert to display units only in `src/units/`. Name variables with units where ambiguous (`range_m`, `fov_deg`, `speed_mps`).
+- Coordinate frames and rotation order are defined in SPEC.md section 3. Follow them exactly.
+- Keep math (pure functions, no React or three.js scene objects) separate from rendering components, so it can be unit tested.
+- Every sensor-model or physics assumption gets a comment explaining it and a matching entry in the in-app "Model assumptions" panel.
+- Each file has a short header comment describing its purpose.
+- Add comments explaining *why* for any non-obvious logic, written for someone learning.
+- Use `three-mesh-bvh` for all ray casting against scene geometry.
+- Heavy computations (coverage) run in a Web Worker.
+- All persistent data must be JSON-serializable and follow the types in SPEC.md section 4.
+- Wrap any `localStorage` access in try/catch; the app must work without it.
+
+## Testing
+- Every pure math function gets Vitest unit tests in `tests/`, mirroring the `src/` structure.
+- Use the test cases listed in SPEC.md section 8 as a minimum.

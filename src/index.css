@@ -1,0 +1,8 @@
+/* Tailwind utility classes used by the layout. */
+@import "tailwindcss";
+
+html,
+body,
+#root {
+  height: 100%;
+}
