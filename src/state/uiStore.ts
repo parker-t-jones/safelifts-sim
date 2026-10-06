@@ -8,11 +8,30 @@
 import { create } from 'zustand'
 import type { DisplayUnitSystem } from '../units/types'
 
+export type CameraMode = 'orbit' | 'chase' | 'top' | 'operator'
+
+export const SIDE_TABS = [
+  'Lift',
+  'Sensors',
+  'Modules',
+  'Placement',
+  'Coverage',
+  'Scene',
+  'Lasers',
+  'Notes',
+] as const
+
+export type SideTab = (typeof SIDE_TABS)[number]
+
 interface UiState {
   unitSystem: DisplayUnitSystem
   setUnitSystem: (unitSystem: DisplayUnitSystem) => void
   sidePanelOpen: boolean
   setSidePanelOpen: (sidePanelOpen: boolean) => void
+  cameraMode: CameraMode
+  setCameraMode: (cameraMode: CameraMode) => void
+  sideTab: SideTab
+  setSideTab: (sideTab: SideTab) => void
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -21,4 +40,8 @@ export const useUiStore = create<UiState>((set) => ({
   setUnitSystem: (unitSystem) => set({ unitSystem }),
   sidePanelOpen: true,
   setSidePanelOpen: (sidePanelOpen) => set({ sidePanelOpen }),
+  cameraMode: 'orbit',
+  setCameraMode: (cameraMode) => set({ cameraMode }),
+  sideTab: 'Lift',
+  setSideTab: (sideTab) => set({ sideTab }),
 }))

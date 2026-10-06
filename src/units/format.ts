@@ -3,7 +3,7 @@
  * Imperial is feet and inches (the construction-site default).
  * Metric is meters.
  */
-import { METERS_PER_INCH } from './convert'
+import { METERS_PER_INCH, metersToFeet, radiansToDegrees } from './convert'
 import type { DisplayUnitSystem } from './types'
 
 /**
@@ -32,6 +32,27 @@ function formatFeetAndInches(length_m: number): string {
   const sign = length_m < 0 ? '-' : ''
 
   return `${sign}${feet} ft ${formatInchTenths(inchTenths)} in`
+}
+
+/** Speed label for the HUD. Imperial uses feet per second, not miles per hour. */
+export function formatSpeed(speed_mps: number, system: DisplayUnitSystem): string {
+  if (system === 'metric') {
+    return `${speed_mps.toFixed(2)} m/s`
+  }
+  return `${metersToFeet(speed_mps).toFixed(1)} ft/s`
+}
+
+/**
+ * Steer label. Positive radians are a left turn, matching the driving math.
+ * Near zero it reads "straight" so a tiny leftover angle does not flicker.
+ */
+export function formatSteer(steer_rad: number): string {
+  const degrees = radiansToDegrees(steer_rad)
+  if (Math.abs(degrees) < 0.5) {
+    return '0° straight'
+  }
+  const side = degrees > 0 ? 'left' : 'right'
+  return `${Math.abs(degrees).toFixed(0)}° ${side}`
 }
 
 function formatInchTenths(inchTenths: number): string {

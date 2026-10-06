@@ -3,8 +3,8 @@
  * These lock the wording the units toggle shows in the 3D view.
  */
 import { describe, expect, it } from 'vitest'
-import { feetToMeters, inchesToMeters } from '../../src/units/convert'
-import { formatLength } from '../../src/units/format'
+import { degreesToRadians, feetToMeters, inchesToMeters } from '../../src/units/convert'
+import { formatLength, formatSpeed, formatSteer } from '../../src/units/format'
 
 describe('formatLength', () => {
   it('shows meters with two decimal places', () => {
@@ -29,5 +29,21 @@ describe('formatLength', () => {
 
   it('keeps a minus sign for a negative length', () => {
     expect(formatLength(-feetToMeters(2), 'imperial')).toBe('-2 ft 0 in')
+  })
+})
+
+describe('formatSpeed', () => {
+  it('uses meters per second or feet per second', () => {
+    expect(formatSpeed(1, 'metric')).toBe('1.00 m/s')
+    expect(formatSpeed(0.3048, 'imperial')).toBe('1.0 ft/s')
+    expect(formatSpeed(-0.5, 'metric')).toBe('-0.50 m/s')
+  })
+})
+
+describe('formatSteer', () => {
+  it('names a positive angle as left', () => {
+    expect(formatSteer(0)).toBe('0° straight')
+    expect(formatSteer(degreesToRadians(12))).toBe('12° left')
+    expect(formatSteer(degreesToRadians(-8))).toBe('8° right')
   })
 })

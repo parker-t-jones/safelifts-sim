@@ -1,13 +1,14 @@
 /**
  * App shell: top bar, 3D view on the left, collapsible panel on the right.
- * Feature panels (lift, sensors, and so on) are filled in later milestones.
  */
 import { SidePanel } from './SidePanel'
 import { TopBar } from './TopBar'
 import { Viewport } from './Viewport'
+import { useDriveKeyboard } from './useDriveKeyboard'
 import { useUiStore } from '../state/uiStore'
 
 export function App() {
+  useDriveKeyboard()
   const sidePanelOpen = useUiStore((state) => state.sidePanelOpen)
 
   return (
