@@ -1,7 +1,9 @@
 /**
  * Right-hand panel. Lift edits the machine. Sensors edits the library.
  * Modules edits housings. Placement puts a housing on the lift.
+ * Coverage reports what those sensors can see.
  */
+import { CoveragePanel } from '../ui/CoveragePanel'
 import { ModulesPanel } from '../ui/ModulesPanel'
 import { PlacementPanel } from '../ui/PlacementPanel'
 import { LiftPanel } from '../ui/LiftPanel'
@@ -45,6 +47,8 @@ export function SidePanel() {
           <ModulesPanel />
         ) : activeTab === 'Placement' ? (
           <PlacementPanel />
+        ) : activeTab === 'Coverage' ? (
+          <CoveragePanel />
         ) : (
           <div className="flex flex-col gap-2">
             <h2 className="text-base font-medium">{activeTab}</h2>

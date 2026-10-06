@@ -3,6 +3,8 @@
  * +X forward, +Y up, +Z right. The group itself is placed in the world.
  */
 import { Quaternion, Vector3 } from 'three'
+import { CoverageCloud } from '../coverage/CoverageCloud'
+import { OperatorBody } from '../coverage/OperatorBody'
 import { DECK_THICKNESS_M, WHEEL_RADIUS_M } from './visual'
 import { PlacedModules } from '../modules/PlacedModules'
 import { snapPointsFor } from './snapPoints'
@@ -25,6 +27,7 @@ export function LiftModel() {
       {/* Platform frame origin: center of the main platform floor. */}
       <group position={[0, pose.platformHeight_m, 0]}>
         <Platform spec={spec} />
+        <OperatorBody />
         <PlacedModules attachTo="platform" />
         {showSnapPoints
           ? snaps
@@ -33,6 +36,7 @@ export function LiftModel() {
           : null}
       </group>
       <PlacedModules attachTo="chassis" />
+      <CoverageCloud />
       {showSnapPoints
         ? snaps
             .filter((point) => point.frame === 'lift')

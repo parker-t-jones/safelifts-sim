@@ -6,8 +6,8 @@ dist-ssr
 # Vite cache
 .vite
 
-# Test coverage
-coverage
+# Test-coverage reports at the repo root. src/coverage is the simulator's coverage code.
+/coverage
 
 # Local environment files
 .env

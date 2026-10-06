@@ -1,6 +1,7 @@
 /**
  * App shell: top bar, 3D view on the left, collapsible panel on the right.
  */
+import { CoverageRunner } from '../coverage/CoverageRunner'
 import { SidePanel } from './SidePanel'
 import { TopBar } from './TopBar'
 import { Viewport } from './Viewport'
@@ -13,6 +14,7 @@ export function App() {
 
   return (
     <div className="flex h-screen flex-col bg-zinc-950 text-zinc-100">
+      <CoverageRunner />
       <TopBar />
       <div className="flex min-h-0 flex-1">
         <Viewport />
