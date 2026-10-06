@@ -1,11 +1,26 @@
 /**
  * Places a person on the platform and asks which sensors can see them.
- * The body is a stack of boxes shifted by the panel's x and z.
+ * Every preset is checked. Only the selected one is drawn and blocks coverage.
  */
 import type { LiftSpec } from '../lift/types'
 import type { Occluder } from './occlusion'
 import { inFieldOfView, inRange, viewFromSensor, type CoverageSensor } from './sensors'
-import type { FalseAlarm, OperatorSpec } from './types'
+import type { FalseAlarm, OperatorPresetId, OperatorSpec } from './types'
+
+/** How far the chest sticks out past the front rail in the lean preset. */
+export const LEAN_PAST_RAIL_M = 0.3
+
+/** Keep the standing body this far inside a rail so it does not start inside the post. */
+const CORNER_CLEARANCE_M = 0.02
+
+export const OPERATOR_PRESET_LABELS: Record<OperatorPresetId, string> = {
+  controls: 'At controls',
+  frontLeft: 'Front-left corner',
+  frontRight: 'Front-right corner',
+  leanFront: 'Leaning over the front rail',
+}
+
+export const OPERATOR_PRESETS: OperatorPresetId[] = ['controls', 'frontLeft', 'frontRight', 'leanFront']
 
 /**
  * Rough standing proportions. Width stays put when the height changes,
@@ -42,17 +57,23 @@ export interface BodyPart {
 }
 
 export interface OperatorPose {
+  id: OperatorPresetId
+  label: string
   parts: BodyPart[]
 }
 
-/** Standing body, shifted by the panel offsets. spec is unused until poses are added. */
+/** The pose selected in the panel. Corners and the lean ignore the controls x/z. */
 export function operatorPose(spec: LiftSpec, operator: OperatorSpec): OperatorPose {
-  void spec
-  return { parts: translate(operatorParts(operator.height_m), operator.x_m, operator.z_m) }
+  return poseFor(spec, operator, operator.preset)
+}
+
+/** All four poses, in panel order. False-alarm checks use every one. */
+export function allOperatorPoses(spec: LiftSpec, operator: OperatorSpec): OperatorPose[] {
+  return OPERATOR_PRESETS.map((id) => poseFor(spec, operator, id))
 }
 
 /**
- * Sensors with a clear view of the person. The occluder must be the lift
+ * Sensors with a clear view of any preset. The occluder must be the lift
  * without the person, so the body itself is not what blocks the ray.
  */
 export function sensorsSeeingOperator(
@@ -66,7 +87,7 @@ export function sensorsSeeingOperator(
   for (const pose of poses) {
     const points = probePoints(pose, platformHeight_m)
     for (const sensor of sensors) {
-      const key = `${sensor.placementId}:${sensor.sensorId}`
+      const key = `${pose.id}:${sensor.placementId}:${sensor.sensorId}`
       if (seen.has(key)) {
         continue
       }
@@ -78,10 +99,69 @@ export function sensorsSeeingOperator(
         placementId: sensor.placementId,
         sensorId: sensor.sensorId,
         label: sensor.label,
+        presetId: pose.id,
       })
     }
   }
   return alarms
+}
+
+function poseFor(spec: LiftSpec, operator: OperatorSpec, id: OperatorPresetId): OperatorPose {
+  const standing = operatorParts(operator.height_m)
+  if (id === 'controls') {
+    return { id, label: OPERATOR_PRESET_LABELS[id], parts: translate(standing, operator.x_m, operator.z_m) }
+  }
+  if (id === 'frontLeft' || id === 'frontRight') {
+    const place = cornerPlace(spec, standing, id === 'frontLeft' ? -1 : 1)
+    return { id, label: OPERATOR_PRESET_LABELS[id], parts: translate(standing, place.x, place.z) }
+  }
+  return { id, label: OPERATOR_PRESET_LABELS[id], parts: leanParts(spec, standing) }
+}
+
+/**
+ * Stand in a front corner of the main platform, inside the rails.
+ * The extension is not used: that is where someone stands beside a front-rail module.
+ */
+function cornerPlace(
+  spec: LiftSpec,
+  parts: readonly BodyPart[],
+  sideSign: -1 | 1,
+): { x: number; z: number } {
+  let halfX = 0
+  let halfZ = 0
+  for (const part of parts) {
+    halfX = Math.max(halfX, part.size_m[0] / 2)
+    halfZ = Math.max(halfZ, part.size_m[2] / 2)
+  }
+  const front = spec.platformLength_m / 2
+  const side = spec.platformWidth_m / 2
+  return {
+    x: Math.max(0, front - halfX - CORNER_CLEARANCE_M),
+    z: sideSign * Math.max(0, side - halfZ - CORNER_CLEARANCE_M),
+  }
+}
+
+/**
+ * Feet stay inside the front rail. The chest and head move forward so the
+ * chest face is LEAN_PAST_RAIL_M past that rail. Shifting the boxes, rather
+ * than rotating them, keeps the same simple body the coverage rays already use.
+ * The front rail is the forward-most one, including the extension when it is out.
+ */
+function leanParts(spec: LiftSpec, standing: readonly BodyPart[]): BodyPart[] {
+  const railX = spec.platformLength_m / 2 + Math.max(0, spec.extensionDeckLength_m)
+  const legs = standing.find((part) => part.name === 'legs')
+  const legHalfX = legs ? legs.size_m[0] / 2 : 0.11
+  const feetX = railX - legHalfX - CORNER_CLEARANCE_M
+  return standing.map((part) => {
+    if (part.name === 'legs') {
+      return { ...part, center_m: [feetX, part.center_m[1], 0] }
+    }
+    const halfX = part.size_m[0] / 2
+    return {
+      ...part,
+      center_m: [railX + LEAN_PAST_RAIL_M - halfX, part.center_m[1], 0],
+    }
+  })
 }
 
 function translate(parts: readonly BodyPart[], x_m: number, z_m: number): BodyPart[] {

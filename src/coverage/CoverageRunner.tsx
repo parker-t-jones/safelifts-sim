@@ -11,6 +11,7 @@ import { useCoverageStore } from '../state/coverageStore'
 import { useUiStore } from '../state/uiStore'
 import type { CoverageJob, CoverageWorkerMessage } from './job'
 import { plannedHeights, plannedSweep, sweepSpacing_m } from './plan'
+import { materialByName } from '../sensors/derived'
 
 /** Messages from an older job are ignored once a newer one has been posted. */
 let latestPostedJobId = 0
@@ -25,6 +26,7 @@ export function CoverageRunner() {
   const envelope_m = useCoverageStore((state) => state.envelope_m)
   const overhead_m = useCoverageStore((state) => state.overhead_m)
   const spacing_m = useCoverageStore((state) => state.spacing_m)
+  const targetMaterial = useCoverageStore((state) => state.targetMaterial)
   const showCloud = useCoverageStore((state) => state.showCloud)
   const analysis = useCoverageStore((state) => state.analysis)
   const operator = useCoverageStore((state) => state.operator)
@@ -50,6 +52,8 @@ export function CoverageRunner() {
         requestedEnvelope_m: envelope_m,
         overhead_m,
         spacing_m,
+        targetMaterial,
+        targetReflectivity: materialByName(targetMaterial).reflectivity,
         heights,
         sweepHeights_m: plannedSweep(
           spec,
@@ -74,6 +78,7 @@ export function CoverageRunner() {
     envelope_m,
     overhead_m,
     spacing_m,
+    targetMaterial,
     analysis,
   ])
 

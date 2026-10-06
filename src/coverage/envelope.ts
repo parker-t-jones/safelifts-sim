@@ -4,7 +4,7 @@
  */
 import type { LiftSpec } from '../lift/types'
 import { closestFace, pointInsideBox, type SolidBox } from './boxes'
-import { type BandId, type RegionId } from './types'
+import { usesDriveWarning, type BandId, type RegionId } from './types'
 
 export interface Sample {
   x: number
@@ -59,7 +59,8 @@ export function locatePoint(
     return {
       region: 'overhead',
       distance_m: gap,
-      band: bandFor(gap, query.warningDistance_m),
+      // Raising the platform into this air is not a drive stop, so it is not too-late or in-time.
+      band: 'seen',
     }
   }
 
@@ -72,7 +73,9 @@ export function locatePoint(
   return {
     region,
     distance_m: nearest.distance_m,
-    band: bandFor(nearest.distance_m, query.warningDistance_m),
+    // Only the drive direction uses the stopping distance. Left, right, and the
+    // floor ring are seen or unseen, because the lift does not drive into them.
+    band: usesDriveWarning(region) ? bandFor(nearest.distance_m, query.warningDistance_m) : 'seen',
   }
 }
 

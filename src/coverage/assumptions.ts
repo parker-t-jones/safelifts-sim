@@ -22,7 +22,7 @@ export function coverageAssumptions(): ModelAssumption[] {
     {
       title: 'In time and too late',
       detail:
-        'The warning distance is how far the lift travels during the sensor delay, then reaction, then braking. Too late means that sample is inside the warning distance, so a detection there would not leave room to stop. In time means it is farther than that, out to the shell edge. The headline is that in-time share. Every region uses the same split, including the sides, the overhead column, and the floor ring.',
+        'The warning distance is how far the lift travels while driving forward or back: the sensor delay, then reaction, then braking. It applies only to the front and rear. Too late means that sample is inside the warning distance, so a detection there would not leave room to stop. In time means it is farther than that, out to the shell edge. The headline is that in-time share, and it names the target material. Left and right are not split. The lift does not drive sideways, so a side sample is not late in the stopping-distance sense. Tight side clearance is left to the lasers and the door-gauntlet scene. Overhead and the floor ring are seen or unseen for the same reason: that distance is not how the platform rises into a pipe, and it is not how a sample beside the chassis is approached.',
     },
     {
       title: 'Regions',
@@ -42,12 +42,17 @@ export function coverageAssumptions(): ModelAssumption[] {
     {
       title: 'Operator',
       detail:
-        'The operator is a stack of three boxes, 1.75 m tall unless you change it. You can shift it forward and to the right of the platform center. A sensor is flagged when it can see that person. Drawing the body also blocks coverage samples behind it. The body is not part of the shell outline.',
+        'The operator is a stack of three boxes, 1.75 m tall unless you change it. Four poses are checked at every height: at the controls, where you set the position; standing in the front-left and front-right corners of the main platform; and leaning over the front rail with the chest about 0.3 m past that rail. A sensor is flagged when it can see any of those poses. Only the pose you draw blocks coverage samples. The body is not part of the shell outline.',
     },
     {
       title: 'Scissors and rails',
       detail:
         'The scissors are the same three-bay X as the drawing, not a real linkage. The rails match the drawn posts and top bars, including the extension. The basket interior is left out of the sample grid. Rays can still pass through the open top and the gaps between bars.',
+    },
+    {
+      title: 'Target material',
+      detail:
+        'A point counts as seen only inside the ToF range for the material you pick. The default is the darkest material in the table. Returned signal is proportional to ρ / d², so the formula is rangeMax × √(ρ / ρ_ref), never longer than rangeMax, and not a linear fraction of reflectivity. Radar ignores the material. The headline names the material.',
     },
     {
       title: 'Height chart',

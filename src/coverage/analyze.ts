@@ -12,7 +12,7 @@ import type { SolidKind } from './boxes'
 import { buildOccluder, type Occluder } from './occlusion'
 import { sampleEnvelope, type Sample } from './envelope'
 import { effectiveEnvelope_m, shellWasExpanded, warningAtHeight } from './shell'
-import { operatorPose, sensorsSeeingOperator } from './operator'
+import { allOperatorPoses, sensorsSeeingOperator } from './operator'
 import { buildSolids } from './solids'
 import {
   coverageSensors,
@@ -55,6 +55,10 @@ export interface AnalyzeArgs {
   requestedEnvelope_m: number
   overhead_m: number
   spacing_m: number
+  /** ToF "can see" uses effective max range at this reflectivity. Radar ignores it. */
+  targetReflectivity: number
+  /** Named in the headline so the result says which material it assumed. */
+  targetMaterial: string
   keepPoints: boolean
   /** Skip the blind-spot search on the coarse chart samples. */
   blindSpot: boolean
@@ -96,6 +100,7 @@ export async function analyzeHeight(args: AnalyzeArgs): Promise<AnalyzeOutput> {
     modules: args.modules,
     placements: args.placements,
     sensorSpecs: args.sensorSpecs,
+    targetReflectivity: args.targetReflectivity,
   })
   const samples = sampleEnvelope(
     {
@@ -110,7 +115,8 @@ export async function analyzeHeight(args: AnalyzeArgs): Promise<AnalyzeOutput> {
   )
 
   const occluder = buildOccluder(solids)
-  // False alarms look at the lift alone so the person's own body is not the blocker.
+  // False alarms look at the lift alone. The drawn person is not in this mesh,
+  // or a ray aimed at another preset would hit the drawn body first.
   const liftOnly = solids.some((solid) => solid.kind === 'operator')
     ? buildOccluder(solids.filter((solid) => solid.kind !== 'operator'))
     : occluder
@@ -118,7 +124,7 @@ export async function analyzeHeight(args: AnalyzeArgs): Promise<AnalyzeOutput> {
     const classified = await classifySamples(samples, sensors, occluder, args.onProgress, args.cancelled)
     const alarms = sensorsSeeingOperator(
       args.platformHeight_m,
-      [operatorPose(args.spec, args.operator)],
+      allOperatorPoses(args.spec, args.operator),
       sensors,
       liftOnly,
     )
@@ -218,9 +224,14 @@ function summarize(
   const histogram = { zero: 0, one: 0, two: 0, threePlus: 0, selfOccluded: 0 }
 
   for (const record of records) {
-    const band = record.sample.band === 'inTime' ? inTime : tooLate
-    addPoint(band, record)
-    addPoint(regions[record.sample.region][record.sample.band], record)
+    if (record.sample.band === 'seen') {
+      addPoint(regions[record.sample.region].seen, record)
+    } else {
+      // Headline totals are the drive direction only. A side sample is not in them.
+      const band = record.sample.band === 'inTime' ? inTime : tooLate
+      addPoint(band, record)
+      addPoint(regions[record.sample.region][record.sample.band], record)
+    }
     if (record.status === 1) {
       histogram.selfOccluded += 1
     } else if (record.count <= 0) {
@@ -244,6 +255,7 @@ function summarize(
     effectiveEnvelope_m: envelope_m,
     expanded: shellWasExpanded(args.requestedEnvelope_m, warningDistance_m),
     overhead_m: Math.max(0, args.overhead_m),
+    targetMaterial: args.targetMaterial,
     sampleCount: records.length,
     inTime,
     tooLate,
@@ -268,12 +280,12 @@ function addPoint(band: BandStats, record: PointRecord): void {
 
 function emptyRegions(): Record<RegionId, RegionStats> {
   return {
-    front: { inTime: emptyBand(), tooLate: emptyBand() },
-    rear: { inTime: emptyBand(), tooLate: emptyBand() },
-    left: { inTime: emptyBand(), tooLate: emptyBand() },
-    right: { inTime: emptyBand(), tooLate: emptyBand() },
-    overhead: { inTime: emptyBand(), tooLate: emptyBand() },
-    floor: { inTime: emptyBand(), tooLate: emptyBand() },
+    front: { inTime: emptyBand(), tooLate: emptyBand(), seen: emptyBand() },
+    rear: { inTime: emptyBand(), tooLate: emptyBand(), seen: emptyBand() },
+    left: { inTime: emptyBand(), tooLate: emptyBand(), seen: emptyBand() },
+    right: { inTime: emptyBand(), tooLate: emptyBand(), seen: emptyBand() },
+    overhead: { inTime: emptyBand(), tooLate: emptyBand(), seen: emptyBand() },
+    floor: { inTime: emptyBand(), tooLate: emptyBand(), seen: emptyBand() },
   }
 }
 

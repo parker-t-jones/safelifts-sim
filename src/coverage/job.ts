@@ -27,6 +27,8 @@ export interface CoverageJob {
   requestedEnvelope_m: number
   overhead_m: number
   spacing_m: number
+  targetMaterial: string
+  targetReflectivity: number
   heights: JobHeight[]
   /** Extra heights for the chart, already excluding the named ones. */
   sweepHeights_m: number[]

@@ -1,6 +1,6 @@
 /**
  * The operator pose selected on the Coverage tab.
- * The same boxes block coverage rays.
+ * The same boxes block coverage rays. The other presets are not drawn.
  */
 import { operatorPose } from './operator'
 import { useCoverageStore } from '../state/coverageStore'

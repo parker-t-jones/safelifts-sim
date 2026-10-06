@@ -38,8 +38,16 @@ export const REGION_LABELS: Record<RegionId, string> = {
 
 export type HeightId = 'stowed' | 'threshold' | 'max' | 'current'
 
-/** Inside the warning distance, or between that distance and the shell edge. */
-export type BandId = 'inTime' | 'tooLate'
+/**
+ * Front and rear use the drive warning distance.
+ * Every other region is only seen or unseen, so those samples use 'seen'.
+ */
+export type BandId = 'inTime' | 'tooLate' | 'seen'
+
+/** The lift drives forward and back. The stopping distance applies in those two regions. */
+export function usesDriveWarning(region: RegionId): boolean {
+  return region === 'front' || region === 'rear'
+}
 
 /** 0 = nothing aimed here, 1 = blocked by the lift or operator, 2 = seen. */
 export type PointStatus = 0 | 1 | 2
@@ -57,6 +65,11 @@ export interface BandStats {
 export interface RegionStats {
   inTime: BandStats
   tooLate: BandStats
+  /**
+   * Every sample, for a region that is not split by the drive warning distance.
+   * Empty for front and rear.
+   */
+  seen: BandStats
 }
 
 export interface BlindSpot {
@@ -75,11 +88,14 @@ export interface RayBlockCounts {
   operator: number
 }
 
+export type OperatorPresetId = 'controls' | 'frontLeft' | 'frontRight' | 'leanFront'
+
 export interface FalseAlarm {
   placementId: string
   sensorId: string
   /** Placement and sensor names, already joined for the panel. */
   label: string
+  presetId: OperatorPresetId
 }
 
 export interface OverlapHistogram {
@@ -103,7 +119,10 @@ export interface HeightReport {
   effectiveEnvelope_m: number
   expanded: boolean
   overhead_m: number
+  /** Material "can see" assumed. ToF range is the effective max at this material. */
+  targetMaterial: string
   sampleCount: number
+  /** Front and rear samples only. Side, overhead, and floor samples are not in here. */
   inTime: BandStats
   tooLate: BandStats
   regions: Record<RegionId, RegionStats>
@@ -132,16 +151,19 @@ export interface CoverageCloud {
 
 export interface OperatorSpec {
   enabled: boolean
-  /** Standing height above the platform floor. */
+  /** Which pose is drawn. Every preset is still checked for false alarms. */
+  preset: OperatorPresetId
+  /** Standing height above the platform floor. Shared by every preset. */
   height_m: number
-  /** Forward offset from the platform center. */
+  /** Controls preset: forward offset from the platform center. */
   x_m: number
-  /** Right offset from the platform center. */
+  /** Controls preset: right offset from the platform center. */
   z_m: number
 }
 
 export const DEFAULT_OPERATOR: OperatorSpec = {
   enabled: false,
+  preset: 'controls',
   height_m: 1.75,
   x_m: 0,
   z_m: 0,

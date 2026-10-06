@@ -109,7 +109,8 @@ export function buildSolids(args: {
   }
 
   if (args.operator.enabled) {
-    // The drawn body is the only person in the shell.
+    // The drawn pose is the only body in the shell. The other presets are
+    // checked separately, so four people are not standing in the point cloud.
     for (const part of operatorPose(args.spec, args.operator).parts) {
       boxes.push(
         alignedBox(

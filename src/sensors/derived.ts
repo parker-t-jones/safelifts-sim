@@ -25,6 +25,22 @@ export const APPROXIMATE_MATERIALS: Array<{ name: string; reflectivity: number }
   { name: 'Black rubber', reflectivity: 0.05 },
 ]
 
+/** Lowest reflectivity in the table. Coverage assumes this until another material is chosen. */
+export function darkestMaterial(): { name: string; reflectivity: number } {
+  let darkest = APPROXIMATE_MATERIALS[0]
+  for (const material of APPROXIMATE_MATERIALS) {
+    if (material.reflectivity < darkest.reflectivity) {
+      darkest = material
+    }
+  }
+  return darkest
+}
+
+/** The named row, or the darkest material when the name is not in the table. */
+export function materialByName(name: string): { name: string; reflectivity: number } {
+  return APPROXIMATE_MATERIALS.find((material) => material.name === name) ?? darkestMaterial()
+}
+
 export function activeMode(spec: SensorSpec): ResolutionMode | null {
   return spec.modes.find((mode) => mode.id === spec.activeModeId) ?? spec.modes[0] ?? null
 }

@@ -3,6 +3,7 @@
  * can see in time to stop. Self-occlusion is listed beside that, not inside it.
  */
 import { coverageAssumptions } from '../coverage/assumptions'
+import { OPERATOR_PRESET_LABELS, OPERATOR_PRESETS } from '../coverage/operator'
 import { plannedHeights } from '../coverage/plan'
 import {
   coverageFraction,
@@ -10,10 +11,13 @@ import {
   GRID_FINE_M,
   REGION_LABELS,
   REGIONS,
+  usesDriveWarning,
+  type FalseAlarm,
   type HeightId,
   type HeightReport,
   type RegionId,
 } from '../coverage/types'
+import { APPROXIMATE_MATERIALS } from '../sensors/derived'
 import { useCoverageStore } from '../state/coverageStore'
 import { useLiftStore } from '../state/liftStore'
 import { useUiStore } from '../state/uiStore'
@@ -36,6 +40,7 @@ export function CoveragePanel() {
   const envelope_m = useCoverageStore((state) => state.envelope_m)
   const overhead_m = useCoverageStore((state) => state.overhead_m)
   const spacing_m = useCoverageStore((state) => state.spacing_m)
+  const targetMaterial = useCoverageStore((state) => state.targetMaterial)
   const showCloud = useCoverageStore((state) => state.showCloud)
   const showSlice = useCoverageStore((state) => state.showSlice)
   const showMap = useCoverageStore((state) => state.showMap)
@@ -52,6 +57,7 @@ export function CoveragePanel() {
   const setEnvelope = useCoverageStore((state) => state.setEnvelope)
   const setOverhead = useCoverageStore((state) => state.setOverhead)
   const setSpacing = useCoverageStore((state) => state.setSpacing)
+  const setTargetMaterial = useCoverageStore((state) => state.setTargetMaterial)
   const setShowCloud = useCoverageStore((state) => state.setShowCloud)
   const setShowSlice = useCoverageStore((state) => state.setShowSlice)
   const setShowMap = useCoverageStore((state) => state.setShowMap)
@@ -179,6 +185,29 @@ export function CoveragePanel() {
         </p>
       </section>
 
+      <section className="flex flex-col gap-2">
+        <h3 className="text-sm font-medium text-zinc-200">Target material</h3>
+        <label className="flex flex-col gap-1 text-xs text-zinc-400">
+          Material a sensor has to see
+          <select
+            className={inputClass}
+            aria-label="Target material"
+            value={targetMaterial}
+            onChange={(event) => setTargetMaterial(event.target.value)}
+          >
+            {APPROXIMATE_MATERIALS.map((material) => (
+              <option key={material.name} value={material.name}>
+                {material.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <p className="text-xs leading-relaxed text-zinc-500">
+          Can see uses rangeMax × √(ρ / ρ_ref) for this material. The default is the darkest one in
+          the table. Radar keeps its own max range.
+        </p>
+      </section>
+
       {report ? <RegionTable report={report} /> : null}
       {report ? <Details report={report} unitSystem={unitSystem} /> : null}
 
@@ -202,7 +231,7 @@ export function CoveragePanel() {
           <HeightChart reports={reports} sweep={sweep} unitSystem={unitSystem} />
           <p className="text-xs leading-relaxed text-zinc-500">
             Large dots are the spacing you picked. Small dots are the 10 cm chart grid. The number
-            is in-time coverage.
+            is in-time coverage of the front and rear.
           </p>
         </section>
       ) : null}
@@ -239,8 +268,18 @@ export function CoveragePanel() {
 
       <section className="flex flex-col gap-2">
         <h3 className="text-sm font-medium text-zinc-200">Operator</h3>
+        <div className="flex flex-wrap gap-1">
+          {OPERATOR_PRESETS.map((id) => (
+            <PresetButton
+              key={id}
+              label={OPERATOR_PRESET_LABELS[id]}
+              selected={operator.preset === id}
+              onClick={() => setOperator({ preset: id })}
+            />
+          ))}
+        </div>
         <Check
-          label="Draw the operator on the platform"
+          label="Draw this pose on the platform"
           checked={operator.enabled}
           onChange={(enabled) => setOperator({ enabled })}
         />
@@ -250,31 +289,38 @@ export function CoveragePanel() {
           unitSystem={unitSystem}
           onChange={(height_m) => setOperator({ height_m })}
         />
-        <LengthField
-          label={`Forward from center (${lengthUnit})`}
-          length_m={operator.x_m}
-          unitSystem={unitSystem}
-          onChange={(x_m) => setOperator({ x_m })}
-        />
-        <LengthField
-          label={`Right from center (${lengthUnit})`}
-          length_m={operator.z_m}
-          unitSystem={unitSystem}
-          onChange={(z_m) => setOperator({ z_m })}
-        />
+        {operator.preset === 'controls' ? (
+          <>
+            <LengthField
+              label={`Forward from center (${lengthUnit})`}
+              length_m={operator.x_m}
+              unitSystem={unitSystem}
+              onChange={(x_m) => setOperator({ x_m })}
+            />
+            <LengthField
+              label={`Right from center (${lengthUnit})`}
+              length_m={operator.z_m}
+              unitSystem={unitSystem}
+              onChange={(z_m) => setOperator({ z_m })}
+            />
+          </>
+        ) : null}
         <p className="text-xs leading-relaxed text-zinc-500">
-          A sensor that can see this person is listed below. Drawing the body also blocks coverage
-          samples that the person stands in front of.
+          Every pose is checked. A sensor that can see any of them is listed below. Only the pose
+          you draw blocks coverage samples. The corners stand inside the main platform. Leaning
+          puts the chest about 0.3 m past the front rail.
         </p>
         {report && report.falseAlarms.length > 0 ? (
           <ul className="flex flex-col gap-1 text-sm text-amber-200">
-            {report.falseAlarms.map((alarm) => (
-              <li key={`${alarm.placementId}:${alarm.sensorId}`}>{alarm.label} can see the operator.</li>
+            {alarmLines(report.falseAlarms).map((line) => (
+              <li key={line.key}>
+                {line.label} can see the operator: {line.presets}.
+              </li>
             ))}
           </ul>
         ) : null}
         {report && report.falseAlarms.length === 0 ? (
-          <p className="text-xs text-zinc-500">No sensor can see the operator at this height.</p>
+          <p className="text-xs text-zinc-500">No sensor can see any of these poses at this height.</p>
         ) : null}
       </section>
 
@@ -300,21 +346,26 @@ function Headline(props: { report: HeightReport }) {
     props.report.inTime.points === 0 ? null : props.report.inTime.selfOccluded / props.report.inTime.points
   return (
     <section className="rounded-md border border-zinc-800 bg-zinc-950/40 p-3">
-      <p className="text-xs uppercase tracking-wide text-zinc-500">In time</p>
+      <p className="text-xs uppercase tracking-wide text-zinc-500">
+        In time · {props.report.targetMaterial}
+      </p>
       <p className="text-3xl font-medium text-zinc-100">{percent(inTime)}</p>
       <p className="mt-1 text-xs leading-relaxed text-zinc-400">
-        Samples farther than the warning distance that at least one sensor sees.
+        Front and rear samples farther than the warning distance that at least one sensor sees.
+        This assumes {props.report.targetMaterial}.
         {blocked !== null ? ` ${percent(blocked)} of that band is blocked by the lift or the operator.` : ''}
       </p>
       <p className="mt-2 text-sm text-zinc-300">Too late: {percent(tooLate)}</p>
       <p className="text-xs text-zinc-500">
-        Samples inside the warning distance. Seeing them does not leave room to stop.
+        Front and rear samples inside the warning distance. Seeing them does not leave room to stop.
       </p>
     </section>
   )
 }
 
 function RegionTable(props: { report: HeightReport }) {
+  const drive = REGIONS.filter((region) => usesDriveWarning(region))
+  const other = REGIONS.filter((region) => !usesDriveWarning(region))
   return (
     <section className="flex flex-col gap-2">
       <h3 className="text-sm font-medium text-zinc-200">Regions</h3>
@@ -327,24 +378,74 @@ function RegionTable(props: { report: HeightReport }) {
           </tr>
         </thead>
         <tbody>
-          {REGIONS.map((region) => (
+          {drive.map((region) => (
             <RegionRow key={region} region={region} report={props.report} />
           ))}
         </tbody>
       </table>
+      <table className="w-full text-left text-xs text-zinc-300">
+        <thead>
+          <tr className="text-zinc-500">
+            <th className="py-1 font-medium">Region</th>
+            <th className="py-1 font-medium">Seen</th>
+          </tr>
+        </thead>
+        <tbody>
+          {other.map((region) => (
+            <RegionRow key={region} region={region} report={props.report} />
+          ))}
+        </tbody>
+      </table>
+      <p className="text-xs leading-relaxed text-zinc-500">
+        Left, right, overhead, and the floor are seen or unseen. The stopping distance applies only
+        while driving forward or back. Seen means a clear line of sight.
+      </p>
     </section>
   )
 }
 
 function RegionRow(props: { region: RegionId; report: HeightReport }) {
   const stats = props.report.regions[props.region]
+  if (usesDriveWarning(props.region)) {
+    return (
+      <tr className="border-t border-zinc-800">
+        <td className="py-1">{REGION_LABELS[props.region]}</td>
+        <td className="py-1">{percent(coverageFraction(stats.inTime))}</td>
+        <td className="py-1">{percent(coverageFraction(stats.tooLate))}</td>
+      </tr>
+    )
+  }
   return (
     <tr className="border-t border-zinc-800">
       <td className="py-1">{REGION_LABELS[props.region]}</td>
-      <td className="py-1">{percent(coverageFraction(stats.inTime))}</td>
-      <td className="py-1">{percent(coverageFraction(stats.tooLate))}</td>
+      <td className="py-1">{percent(coverageFraction(stats.seen))}</td>
     </tr>
   )
+}
+
+function alarmLines(alarms: readonly FalseAlarm[]): Array<{ key: string; label: string; presets: string }> {
+  const order: string[] = []
+  const grouped = new Map<string, { label: string; presets: FalseAlarm['presetId'][] }>()
+  for (const alarm of alarms) {
+    const key = `${alarm.placementId}:${alarm.sensorId}`
+    const row = grouped.get(key)
+    if (!row) {
+      grouped.set(key, { label: alarm.label, presets: [alarm.presetId] })
+      order.push(key)
+      continue
+    }
+    if (!row.presets.includes(alarm.presetId)) {
+      row.presets.push(alarm.presetId)
+    }
+  }
+  return order.map((key) => {
+    const row = grouped.get(key) as { label: string; presets: FalseAlarm['presetId'][] }
+    return {
+      key,
+      label: row.label,
+      presets: row.presets.map((id) => OPERATOR_PRESET_LABELS[id]).join(', '),
+    }
+  })
 }
 
 function Details(props: { report: HeightReport; unitSystem: 'imperial' | 'metric' }) {

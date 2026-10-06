@@ -6,16 +6,17 @@ import { describe, expect, it } from 'vitest'
 import { analyzeHeight } from '../../src/coverage/analyze'
 import { buildOccluder } from '../../src/coverage/occlusion'
 import { locatePoint } from '../../src/coverage/envelope'
-import { operatorPose, sensorsSeeingOperator } from '../../src/coverage/operator'
+import { LEAN_PAST_RAIL_M, operatorPose, sensorsSeeingOperator } from '../../src/coverage/operator'
 import { effectiveEnvelope_m, warningAtHeight } from '../../src/coverage/shell'
 import { buildSolids } from '../../src/coverage/solids'
-import { inFieldOfView, inRange, viewFromSensor, type CoverageSensor } from '../../src/coverage/sensors'
+import { coverageSensors, inFieldOfView, inRange, viewFromSensor, type CoverageSensor } from '../../src/coverage/sensors'
 import { alignedBox } from '../../src/coverage/boxes'
 import { DEFAULT_OPERATOR } from '../../src/coverage/types'
 import { APPROXIMATE_LIFT } from '../../src/lift/preset'
 import { SIX_CLUSTER_MODULE } from '../../src/modules/preset'
 import type { ModulePlacement } from '../../src/placement/types'
-import { VL53L8CX_SPEC } from '../../src/sensors/preset'
+import { darkestMaterial, effectiveMax_m } from '../../src/sensors/derived'
+import { GENERIC_RADAR_SPEC, VL53L8CX_SPEC } from '../../src/sensors/preset'
 import type { LiftSpec } from '../../src/lift/types'
 
 const placement: ModulePlacement = {
@@ -129,11 +130,11 @@ describe('regions and bands', () => {
     warningDistance_m: 0.4,
   }
 
-  it('splits every region into too late and in time', () => {
+  it('splits only the drive direction, and leaves the sides as seen or unseen', () => {
     const nose = spec.chassisLength_m / 2
     const floor = locatePoint([nose + 0.3, 0.2, 0], query)
     expect(floor?.region).toBe('floor')
-    expect(floor?.band).toBe('tooLate')
+    expect(floor?.band).toBe('seen')
 
     const extensionFront = spec.platformLength_m / 2 + spec.extensionDeckLength_m
     const ahead = locatePoint([extensionFront + 0.8, 1.2, 0], query)
@@ -147,13 +148,57 @@ describe('regions and bands', () => {
     const side = locatePoint([0, 1.2, spec.chassisWidth_m / 2 + 0.2], query)
     expect(side?.region).toBe('right')
     expect(side?.distance_m).toBeLessThan(0.4)
-    expect(side?.band).toBe('tooLate')
+    expect(side?.band).toBe('seen')
 
     const railTop = height + spec.guardrailHeight_m
     const overhead = locatePoint([0, railTop + 0.5, 0], query)
     expect(overhead?.region).toBe('overhead')
     expect(overhead?.distance_m).toBeCloseTo(0.5, 6)
-    expect(overhead?.band).toBe('inTime')
+    expect(overhead?.band).toBe('seen')
+  })
+})
+
+describe('target material', () => {
+  it('defaults to the darkest row and shrinks ToF range, not radar range', () => {
+    const darkest = darkestMaterial()
+    expect(darkest.name).toBe('Black rubber')
+    expect(darkest.reflectivity).toBe(0.05)
+
+    const sensors = coverageSensors({
+      platformHeight_m: 1,
+      modules: [SIX_CLUSTER_MODULE],
+      placements: [placement],
+      sensorSpecs: [VL53L8CX_SPEC, GENERIC_RADAR_SPEC],
+      targetReflectivity: darkest.reflectivity,
+    })
+    const tof = sensors.find((sensor) => sensor.label.includes('VL53'))
+    expect(tof?.rangeMax_m).toBeCloseTo(
+      effectiveMax_m(VL53L8CX_SPEC.rangeMax_m, 0.05, VL53L8CX_SPEC.tof?.referenceReflectivity ?? 0) ?? 0,
+      6,
+    )
+    expect(tof?.rangeMax_m).toBeLessThan(VL53L8CX_SPEC.rangeMax_m)
+
+    const radarModule = {
+      ...SIX_CLUSTER_MODULE,
+      id: 'radar-module',
+      sensors: [
+        {
+          id: 'radar',
+          name: 'Radar',
+          sensorSpecId: GENERIC_RADAR_SPEC.id,
+          position_m: [0, 0, 0] as [number, number, number],
+          yawPitchRoll_deg: [0, 0, 0] as [number, number, number],
+        },
+      ],
+    }
+    const radar = coverageSensors({
+      platformHeight_m: 1,
+      modules: [radarModule],
+      placements: [{ ...placement, id: 'radar-place', moduleId: 'radar-module' }],
+      sensorSpecs: [GENERIC_RADAR_SPEC],
+      targetReflectivity: 0.05,
+    })
+    expect(radar[0]?.rangeMax_m).toBe(GENERIC_RADAR_SPEC.rangeMax_m)
   })
 })
 
@@ -202,6 +247,8 @@ describe('self-occlusion', () => {
       requestedEnvelope_m: 1,
       overhead_m: 0.5,
       spacing_m: 0.25,
+      targetReflectivity: 0.88,
+      targetMaterial: 'White reference',
       keepPoints: false,
       blindSpot: true,
     }
@@ -236,17 +283,32 @@ describe('self-occlusion', () => {
   })
 })
 
-describe('operator body', () => {
-  it('shifts the standing boxes by the panel offsets', () => {
-    const pose = operatorPose(APPROXIMATE_LIFT, { ...DEFAULT_OPERATOR, x_m: 0.25, z_m: -0.1 })
-    expect(pose.parts[0]?.center_m[0]).toBeCloseTo(0.25, 6)
-    expect(pose.parts[0]?.center_m[2]).toBeCloseTo(-0.1, 6)
-    expect(pose.parts).toHaveLength(3)
+describe('operator presets', () => {
+  it('keeps the controls position editable, the corners inside, and the chest past the rail', () => {
+    const spec = APPROXIMATE_LIFT
+    const controls = operatorPose(spec, { ...DEFAULT_OPERATOR, preset: 'controls', x_m: 0.25, z_m: -0.1 })
+    expect(controls.parts[0]?.center_m[0]).toBeCloseTo(0.25, 6)
+    expect(controls.parts[0]?.center_m[2]).toBeCloseTo(-0.1, 6)
+
+    const left = operatorPose(spec, { ...DEFAULT_OPERATOR, preset: 'frontLeft' })
+    const right = operatorPose(spec, { ...DEFAULT_OPERATOR, preset: 'frontRight' })
+    expect(left.parts[0]?.center_m[2]).toBeLessThan(0)
+    expect(right.parts[0]?.center_m[2]).toBeGreaterThan(0)
+    expect(left.parts[0]?.center_m[0]).toBeLessThan(spec.platformLength_m / 2)
+
+    const lean = operatorPose(spec, { ...DEFAULT_OPERATOR, preset: 'leanFront' })
+    const torso = lean.parts.find((part) => part.name === 'torso')
+    const legs = lean.parts.find((part) => part.name === 'legs')
+    const railX = spec.platformLength_m / 2 + spec.extensionDeckLength_m
+    expect(torso).toBeDefined()
+    expect(legs).toBeDefined()
+    expect((torso?.center_m[0] ?? 0) + (torso?.size_m[0] ?? 0) / 2).toBeCloseTo(railX + LEAN_PAST_RAIL_M, 6)
+    expect((legs?.center_m[0] ?? 0) + (legs?.size_m[0] ?? 0) / 2).toBeLessThan(railX)
   })
 
-  it('flags a sensor looking at the person and ignores one looking away', () => {
+  it('flags a sensor looking at the lean and ignores one looking away', () => {
     const spec = APPROXIMATE_LIFT
-    const pose = operatorPose(spec, DEFAULT_OPERATOR)
+    const pose = operatorPose(spec, { ...DEFAULT_OPERATOR, preset: 'leanFront' })
     const torso = pose.parts.find((part) => part.name === 'torso')
     const y = (torso?.center_m[1] ?? 1) + spec.platformHeightMin_m
     const x = (torso?.center_m[0] ?? 1) - 0.4
@@ -269,6 +331,7 @@ describe('operator body', () => {
     const alarms = sensorsSeeingOperator(spec.platformHeightMin_m, [pose], [looking, away], occluder)
     occluder.dispose()
     expect(alarms.map((alarm) => alarm.sensorId)).toEqual(['look'])
+    expect(alarms[0]?.presetId).toBe('leanFront')
   })
 })
 
