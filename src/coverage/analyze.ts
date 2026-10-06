@@ -7,6 +7,7 @@
 import type { LiftSpec } from '../lift/types'
 import type { SensorModule } from '../modules/types'
 import type { ModulePlacement } from '../placement/types'
+import type { AmbientLight } from '../sensors/derived'
 import type { SensorSpec } from '../sensors/types'
 import type { SolidKind } from './boxes'
 import { buildOccluder, type Occluder } from './occlusion'
@@ -55,10 +56,11 @@ export interface AnalyzeArgs {
   requestedEnvelope_m: number
   overhead_m: number
   spacing_m: number
-  /** ToF "can see" uses effective max range at this reflectivity. Radar ignores it. */
+  /** ToF "can see" uses effective max range at this reflectivity, unless a measured row replaces it. */
   targetReflectivity: number
   /** Named in the headline so the result says which material it assumed. */
   targetMaterial: string
+  ambientLight: AmbientLight
   keepPoints: boolean
   /** Skip the blind-spot search on the coarse chart samples. */
   blindSpot: boolean
@@ -100,7 +102,9 @@ export async function analyzeHeight(args: AnalyzeArgs): Promise<AnalyzeOutput> {
     modules: args.modules,
     placements: args.placements,
     sensorSpecs: args.sensorSpecs,
+    targetMaterial: args.targetMaterial,
     targetReflectivity: args.targetReflectivity,
+    ambientLight: args.ambientLight,
   })
   const samples = sampleEnvelope(
     {
@@ -256,6 +260,7 @@ function summarize(
     expanded: shellWasExpanded(args.requestedEnvelope_m, warningDistance_m),
     overhead_m: Math.max(0, args.overhead_m),
     targetMaterial: args.targetMaterial,
+    ambientLight: args.ambientLight,
     sampleCount: records.length,
     inTime,
     tooLate,

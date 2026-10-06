@@ -5,6 +5,7 @@
 import type { LiftSpec } from '../lift/types'
 import type { SensorModule } from '../modules/types'
 import type { ModulePlacement } from '../placement/types'
+import type { AmbientLight } from '../sensors/derived'
 import type { SensorSpec } from '../sensors/types'
 import type { CoverageCloud, HeightId, HeightReport, OperatorSpec, SweepPoint } from './types'
 
@@ -29,6 +30,7 @@ export interface CoverageJob {
   spacing_m: number
   targetMaterial: string
   targetReflectivity: number
+  ambientLight: AmbientLight
   heights: JobHeight[]
   /** Extra heights for the chart, already excluding the named ones. */
   sweepHeights_m: number[]

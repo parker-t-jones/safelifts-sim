@@ -169,7 +169,9 @@ describe('target material', () => {
       modules: [SIX_CLUSTER_MODULE],
       placements: [placement],
       sensorSpecs: [VL53L8CX_SPEC, GENERIC_RADAR_SPEC],
+      targetMaterial: darkest.name,
       targetReflectivity: darkest.reflectivity,
+      ambientLight: 'indoor',
     })
     const tof = sensors.find((sensor) => sensor.label.includes('VL53'))
     expect(tof?.rangeMax_m).toBeCloseTo(
@@ -196,7 +198,9 @@ describe('target material', () => {
       modules: [radarModule],
       placements: [{ ...placement, id: 'radar-place', moduleId: 'radar-module' }],
       sensorSpecs: [GENERIC_RADAR_SPEC],
+      targetMaterial: 'Black rubber',
       targetReflectivity: 0.05,
+      ambientLight: 'directSun',
     })
     expect(radar[0]?.rangeMax_m).toBe(GENERIC_RADAR_SPEC.rangeMax_m)
   })
@@ -249,6 +253,7 @@ describe('self-occlusion', () => {
       spacing_m: 0.25,
       targetReflectivity: 0.88,
       targetMaterial: 'White reference',
+      ambientLight: 'indoor' as const,
       keepPoints: false,
       blindSpot: true,
     }

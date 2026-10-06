@@ -18,6 +18,16 @@ export interface ResolutionMode {
   updateRate_hz: number
 }
 
+/**
+ * A bench measurement of max range on one material.
+ * When this row is present, it replaces the reflectivity formula for that material.
+ * It is the indoor range. Ambient light scales it afterward.
+ */
+export interface MeasuredRange {
+  material: string
+  rangeMax_m: number
+}
+
 export interface SensorSpec {
   id: string
   name: string
@@ -50,6 +60,11 @@ export interface SensorSpec {
    * against the datasheet. The form says so.
    */
   approximate: boolean
+  /**
+   * Optional bench ranges. A filled row overrides the square-root formula
+   * for that material. An empty list, or no row for the material, keeps the formula.
+   */
+  measuredRanges?: MeasuredRange[]
 
   tof?: {
     /** Sub-rays along one side of a zone. 4 means 16 rays in the zone. */

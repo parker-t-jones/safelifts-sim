@@ -9,6 +9,7 @@ import {
   ZONE_FOOTPRINT_DISTANCES_M,
   activeMode,
   effectiveMax_m,
+  tofSeeingRange_m,
   sensorDelay_s,
   updatePeriod_s,
   zoneAngle_deg,
@@ -274,6 +275,41 @@ function SensorEditor(props: { spec: SensorSpec }) {
               })
             }
           />
+          <div className="flex flex-col gap-2">
+            <p className="text-xs text-zinc-400">
+              Measured max range ({lengthUnit}). Leave a row blank to keep the square-root formula.
+              A filled row is the indoor range for that material.
+            </p>
+            {APPROXIMATE_MATERIALS.map((material) => {
+              const row = spec.measuredRanges?.find((item) => item.material === material.name)
+              const display = row ? lengthToDisplay(row.rangeMax_m, unitSystem) : ''
+              return (
+                <label key={material.name} className="flex flex-col gap-1 text-xs text-zinc-400">
+                  {material.name}
+                  <input
+                    className={inputClass}
+                    type="number"
+                    min={0}
+                    step={unitSystem === 'metric' ? 0.01 : 0.1}
+                    placeholder="formula"
+                    aria-label={`Measured range for ${material.name}`}
+                    value={display === '' ? '' : roundInput(display)}
+                    onChange={(event) => {
+                      const text = event.target.value
+                      if (text === '') {
+                        setMeasuredRange(spec, material.name, null)
+                        return
+                      }
+                      const next = Number(text)
+                      if (Number.isFinite(next)) {
+                        setMeasuredRange(spec, material.name, Math.max(0, lengthFromDisplay(next, unitSystem)))
+                      }
+                    }}
+                  />
+                </label>
+              )
+            })}
+          </div>
           <NumberField
             label={`Noise base (${lengthUnit})`}
             value={lengthToDisplay(spec.tof.noise.sigmaBase_m, unitSystem)}
@@ -445,14 +481,23 @@ function DerivedReadout(props: {
       {props.spec.kind !== 'radar' && (
         <div className="mt-1 flex flex-col gap-1">
           <p className="text-zinc-400">Effective max range by material (approximate):</p>
+          <p>
+            Formula, indoor light: rangeMax × √(ρ / ρ_ref), capped at rangeMax. A filled measured
+            row replaces it.
+          </p>
           {reference <= 0 ? (
             <p>Reference reflectivity must be above zero.</p>
           ) : (
             APPROXIMATE_MATERIALS.map((material) => {
-              const range_m = effectiveMax_m(props.spec.rangeMax_m, material.reflectivity, reference)
+              const formula_m = effectiveMax_m(props.spec.rangeMax_m, material.reflectivity, reference)
+              const seeing_m = tofSeeingRange_m(props.spec, material.name, material.reflectivity, 'indoor')
+              const measured = props.spec.measuredRanges?.some((row) => row.material === material.name)
+              const formulaNote =
+                measured && formula_m !== null ? ` (measured; formula would be ${formatLength(formula_m, unitSystem)})` : ''
               return (
                 <p key={material.name}>
-                  {material.name}: {range_m === null ? '—' : formatLength(range_m, unitSystem)}
+                  {material.name}: {formatLength(seeing_m, unitSystem)}
+                  {formulaNote}
                 </p>
               )
             })
@@ -519,6 +564,14 @@ function CurrentSpeedPreview(props: {
       {distance_m === null ? 'braking rate or update rate is zero' : formatLength(distance_m, unitSystem)}
     </p>
   )
+}
+
+function setMeasuredRange(spec: SensorSpec, material: string, rangeMax_m: number | null): void {
+  const rest = (spec.measuredRanges ?? []).filter((row) => row.material !== material)
+  const measuredRanges = rangeMax_m === null ? rest : [...rest, { material, rangeMax_m }]
+  useSensorStore.getState().updateSpec(spec.id, {
+    measuredRanges: measuredRanges.length === 0 ? undefined : measuredRanges,
+  })
 }
 
 function kindPatch(spec: SensorSpec, kind: SensorKind): Partial<SensorSpec> {

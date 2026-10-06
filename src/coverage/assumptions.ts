@@ -52,7 +52,12 @@ export function coverageAssumptions(): ModelAssumption[] {
     {
       title: 'Target material',
       detail:
-        'A point counts as seen only inside the ToF range for the material you pick. The default is the darkest material in the table. Returned signal is proportional to ρ / d², so the formula is rangeMax × √(ρ / ρ_ref), never longer than rangeMax, and not a linear fraction of reflectivity. Radar ignores the material. The headline names the material.',
+        'A point counts as seen only inside the ToF range for the material you pick. The default is the darkest material in the table. Returned signal is proportional to ρ / d², so the formula is rangeMax × √(ρ / ρ_ref), never longer than rangeMax, and not a linear fraction of reflectivity. A measured max-range row on that sensor replaces the formula for that material. Radar ignores the material. The headline names the material.',
+    },
+    {
+      title: 'Ambient light',
+      detail:
+        'Indoor, overcast, and direct sun multiply the ToF range by 1, 0.75, and 0.5 after the material range is known. These factors are approximate stand-ins, not datasheet numbers. Indoor is the lighting assumed by rangeMax and by a measured table. Radar is not scaled.',
     },
     {
       title: 'Height chart',

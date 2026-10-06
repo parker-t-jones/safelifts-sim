@@ -27,6 +27,7 @@ export function CoverageRunner() {
   const overhead_m = useCoverageStore((state) => state.overhead_m)
   const spacing_m = useCoverageStore((state) => state.spacing_m)
   const targetMaterial = useCoverageStore((state) => state.targetMaterial)
+  const ambientLight = useCoverageStore((state) => state.ambientLight)
   const showCloud = useCoverageStore((state) => state.showCloud)
   const analysis = useCoverageStore((state) => state.analysis)
   const operator = useCoverageStore((state) => state.operator)
@@ -54,6 +55,7 @@ export function CoverageRunner() {
         spacing_m,
         targetMaterial,
         targetReflectivity: materialByName(targetMaterial).reflectivity,
+        ambientLight,
         heights,
         sweepHeights_m: plannedSweep(
           spec,
@@ -79,6 +81,7 @@ export function CoverageRunner() {
     overhead_m,
     spacing_m,
     targetMaterial,
+    ambientLight,
     analysis,
   ])
 

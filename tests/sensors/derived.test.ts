@@ -4,9 +4,10 @@
  */
 import { describe, expect, it } from 'vitest'
 import { degreesToRadians } from '../../src/units/convert'
-import { VL53L8CX_SPEC } from '../../src/sensors/preset'
+import { GENERIC_RADAR_SPEC, VL53L8CX_SPEC } from '../../src/sensors/preset'
 import {
   effectiveMax_m,
+  tofSeeingRange_m,
   sensorDelay_s,
   updatePeriod_s,
   zoneAngle_deg,
@@ -44,6 +45,35 @@ describe('effectiveMax_m', () => {
 
   it('rejects a reference reflectivity of zero', () => {
     expect(effectiveMax_m(4, 0.5, 0)).toBeNull()
+  })
+})
+
+describe('tofSeeingRange_m', () => {
+  it('uses the square-root formula indoors when no measurement is filled in', () => {
+    const range_m = tofSeeingRange_m(VL53L8CX_SPEC, 'Black rubber', 0.05, 'indoor')
+    expect(range_m).toBeCloseTo(effectiveMax_m(4, 0.05, 0.88) ?? 0, 8)
+  })
+
+  it('lets a measured row replace the formula, then scales it by ambient light', () => {
+    const measured = {
+      ...VL53L8CX_SPEC,
+      measuredRanges: [{ material: 'Black rubber', rangeMax_m: 1.2 }],
+    }
+    expect(tofSeeingRange_m(measured, 'Black rubber', 0.05, 'indoor')).toBeCloseTo(1.2, 8)
+    expect(tofSeeingRange_m(measured, 'Black rubber', 0.05, 'directSun')).toBeCloseTo(0.6, 8)
+    // A different material still uses the formula.
+    expect(tofSeeingRange_m(measured, 'Raw wood', 0.3, 'indoor')).toBeCloseTo(
+      effectiveMax_m(4, 0.3, 0.88) ?? 0,
+      8,
+    )
+  })
+
+  it('does not scale radar', () => {
+    const radar = {
+      ...GENERIC_RADAR_SPEC,
+      measuredRanges: [{ material: 'Black rubber', rangeMax_m: 1.2 }],
+    }
+    expect(tofSeeingRange_m(radar, 'Black rubber', 0.05, 'directSun')).toBe(GENERIC_RADAR_SPEC.rangeMax_m)
   })
 })
 

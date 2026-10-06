@@ -17,7 +17,12 @@ import {
   type HeightReport,
   type RegionId,
 } from '../coverage/types'
-import { APPROXIMATE_MATERIALS } from '../sensors/derived'
+import {
+  AMBIENT_LABELS,
+  AMBIENT_LIGHTS,
+  AMBIENT_RANGE_FACTOR,
+  APPROXIMATE_MATERIALS,
+} from '../sensors/derived'
 import { useCoverageStore } from '../state/coverageStore'
 import { useLiftStore } from '../state/liftStore'
 import { useUiStore } from '../state/uiStore'
@@ -41,6 +46,7 @@ export function CoveragePanel() {
   const overhead_m = useCoverageStore((state) => state.overhead_m)
   const spacing_m = useCoverageStore((state) => state.spacing_m)
   const targetMaterial = useCoverageStore((state) => state.targetMaterial)
+  const ambientLight = useCoverageStore((state) => state.ambientLight)
   const showCloud = useCoverageStore((state) => state.showCloud)
   const showSlice = useCoverageStore((state) => state.showSlice)
   const showMap = useCoverageStore((state) => state.showMap)
@@ -58,6 +64,7 @@ export function CoveragePanel() {
   const setOverhead = useCoverageStore((state) => state.setOverhead)
   const setSpacing = useCoverageStore((state) => state.setSpacing)
   const setTargetMaterial = useCoverageStore((state) => state.setTargetMaterial)
+  const setAmbientLight = useCoverageStore((state) => state.setAmbientLight)
   const setShowCloud = useCoverageStore((state) => state.setShowCloud)
   const setShowSlice = useCoverageStore((state) => state.setShowSlice)
   const setShowMap = useCoverageStore((state) => state.setShowMap)
@@ -203,8 +210,24 @@ export function CoveragePanel() {
           </select>
         </label>
         <p className="text-xs leading-relaxed text-zinc-500">
-          Can see uses rangeMax × √(ρ / ρ_ref) for this material. The default is the darkest one in
-          the table. Radar keeps its own max range.
+          Can see uses rangeMax × √(ρ / ρ_ref) for this material, unless that sensor has a measured
+          range filled in. The default material is the darkest one in the table. Radar keeps its
+          own max range.
+        </p>
+        <p className="text-xs text-zinc-400">Ambient light</p>
+        <div className="flex flex-wrap gap-1">
+          {AMBIENT_LIGHTS.map((id) => (
+            <PresetButton
+              key={id}
+              label={`${AMBIENT_LABELS[id]} (×${AMBIENT_RANGE_FACTOR[id]})`}
+              selected={ambientLight === id}
+              onClick={() => setAmbientLight(id)}
+            />
+          ))}
+        </div>
+        <p className="text-xs leading-relaxed text-zinc-500">
+          These factors scale ToF range. They are approximate, not datasheet numbers. Indoor is the
+          lighting a measured range assumes.
         </p>
       </section>
 
@@ -347,12 +370,13 @@ function Headline(props: { report: HeightReport }) {
   return (
     <section className="rounded-md border border-zinc-800 bg-zinc-950/40 p-3">
       <p className="text-xs uppercase tracking-wide text-zinc-500">
-        In time · {props.report.targetMaterial}
+        In time · {props.report.targetMaterial} · {AMBIENT_LABELS[props.report.ambientLight]}
       </p>
       <p className="text-3xl font-medium text-zinc-100">{percent(inTime)}</p>
       <p className="mt-1 text-xs leading-relaxed text-zinc-400">
         Front and rear samples farther than the warning distance that at least one sensor sees.
-        This assumes {props.report.targetMaterial}.
+        This assumes {props.report.targetMaterial}, {AMBIENT_LABELS[props.report.ambientLight].toLowerCase()}{' '}
+        light.
         {blocked !== null ? ` ${percent(blocked)} of that band is blocked by the lift or the operator.` : ''}
       </p>
       <p className="mt-2 text-sm text-zinc-300">Too late: {percent(tooLate)}</p>

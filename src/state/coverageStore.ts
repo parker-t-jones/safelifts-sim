@@ -17,7 +17,7 @@ import {
   type OperatorSpec,
   type SweepPoint,
 } from '../coverage/types'
-import { darkestMaterial } from '../sensors/derived'
+import { darkestMaterial, type AmbientLight } from '../sensors/derived'
 
 interface CoverageState {
   envelope_m: number
@@ -25,6 +25,7 @@ interface CoverageState {
   spacing_m: number
   /** Name of a row in the reflectivity table. "Can see" uses that material. */
   targetMaterial: string
+  ambientLight: AmbientLight
   showCloud: boolean
   showSlice: boolean
   showMap: boolean
@@ -42,6 +43,7 @@ interface CoverageState {
   setOverhead: (overhead_m: number) => void
   setSpacing: (spacing_m: number) => void
   setTargetMaterial: (targetMaterial: string) => void
+  setAmbientLight: (ambientLight: AmbientLight) => void
   setShowCloud: (showCloud: boolean) => void
   setShowSlice: (showSlice: boolean) => void
   setShowMap: (showMap: boolean) => void
@@ -60,6 +62,7 @@ export const useCoverageStore = create<CoverageState>((set) => ({
   overhead_m: DEFAULT_OVERHEAD_M,
   spacing_m: GRID_DEFAULT_M,
   targetMaterial: darkestMaterial().name,
+  ambientLight: 'indoor',
   showCloud: true,
   showSlice: true,
   showMap: true,
@@ -79,6 +82,7 @@ export const useCoverageStore = create<CoverageState>((set) => ({
   setSpacing: (spacing_m) =>
     set({ spacing_m: clamp(spacing_m, GRID_FINE_M, GRID_COARSE_MAX_M) }),
   setTargetMaterial: (targetMaterial) => set({ targetMaterial }),
+  setAmbientLight: (ambientLight) => set({ ambientLight }),
   setShowCloud: (showCloud) => set({ showCloud }),
   setShowSlice: (showSlice) => set({ showSlice }),
   setShowMap: (showMap) => set({ showMap }),

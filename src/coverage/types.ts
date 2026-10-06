@@ -2,6 +2,8 @@
  * Coverage settings and results. Distances are meters.
  * The worker and the panel both use these plain objects.
  */
+import type { AmbientLight } from '../sensors/derived'
+
 /** Default shell around the lift. The effective shell can grow past this. */
 export const DEFAULT_ENVELOPE_M = 1
 
@@ -121,6 +123,8 @@ export interface HeightReport {
   overhead_m: number
   /** Material "can see" assumed. ToF range is the effective max at this material. */
   targetMaterial: string
+  /** Lighting assumed for the ToF range scale. */
+  ambientLight: AmbientLight
   sampleCount: number
   /** Front and rear samples only. Side, overhead, and floor samples are not in here. */
   inTime: BandStats

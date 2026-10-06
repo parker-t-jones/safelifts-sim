@@ -6,7 +6,7 @@
 import { mirrorMount, rotateMount, transformPoint } from '../modules/frames'
 import type { SensorModule } from '../modules/types'
 import type { ModulePlacement } from '../placement/types'
-import { activeMode, effectiveMax_m } from '../sensors/derived'
+import { activeMode, tofSeeingRange_m, type AmbientLight } from '../sensors/derived'
 import type { SensorSpec } from '../sensors/types'
 
 export interface CoverageSensor {
@@ -30,11 +30,14 @@ export function coverageSensors(args: {
   modules: readonly SensorModule[]
   placements: readonly ModulePlacement[]
   sensorSpecs: readonly SensorSpec[]
+  /** Material name, used to find a measured-range row. */
+  targetMaterial: string
   /**
-   * ToF max range is effectiveMax at this reflectivity.
-   * Radar ignores it: its model does not use material.
+   * ToF max range is effectiveMax at this reflectivity, unless a measured
+   * row replaces it. Radar ignores both: its model does not use material.
    */
   targetReflectivity: number
+  ambientLight: AmbientLight
 }): CoverageSensor[] {
   const sensors: CoverageSensor[] = []
   for (const placement of args.placements) {
@@ -74,19 +77,11 @@ export function coverageSensors(args: {
         fovH_deg: spec.fovH_deg,
         fovV_deg: spec.fovV_deg,
         rangeMin_m: Math.max(0, spec.rangeMin_m),
-        rangeMax_m: seeingRange_m(spec, args.targetReflectivity),
+        rangeMax_m: tofSeeingRange_m(spec, args.targetMaterial, args.targetReflectivity, args.ambientLight),
       })
     }
   }
   return sensors
-}
-
-function seeingRange_m(spec: SensorSpec, reflectivity: number): number {
-  if (!spec.tof) {
-    return Math.max(0, spec.rangeMax_m)
-  }
-  const scaled = effectiveMax_m(spec.rangeMax_m, reflectivity, spec.tof.referenceReflectivity)
-  return scaled ?? Math.max(0, spec.rangeMax_m)
 }
 
 function aim(

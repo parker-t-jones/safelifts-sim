@@ -86,6 +86,10 @@ export function zoneFootprint_m(distance_m: number, zoneAngle_deg: number): numb
 
 /**
  * Farthest range that still returns enough signal at this reflectivity.
+ *
+ * Returned signal is proportional to ρ / d². The distance at which that
+ * signal matches the reference target is therefore
+ * rangeMax × √(ρ / ρ_ref), not a linear fraction of the reflectivity.
  * Null when the reference reflectivity is 0 or negative, because the
  * formula would divide by zero or flip the sign.
  * Results above rangeMax are capped at rangeMax.
@@ -101,6 +105,50 @@ export function effectiveMax_m(
   const rangeMax = Math.max(0, rangeMax_m)
   const scaled = rangeMax * Math.sqrt(reflectivity / referenceReflectivity)
   return Math.min(rangeMax, scaled)
+}
+
+export const AMBIENT_LIGHTS = ['indoor', 'overcast', 'directSun'] as const
+
+export type AmbientLight = (typeof AMBIENT_LIGHTS)[number]
+
+export const AMBIENT_LABELS: Record<AmbientLight, string> = {
+  indoor: 'Indoor',
+  overcast: 'Overcast',
+  directSun: 'Direct sun',
+}
+
+/**
+ * Multipliers on ToF range after the material range is known.
+ * Approximate stand-ins, not datasheet numbers. Indoor is 1 because
+ * rangeMax and a measured table are both taken as indoor figures.
+ */
+export const AMBIENT_RANGE_FACTOR: Record<AmbientLight, number> = {
+  indoor: 1,
+  overcast: 0.75,
+  directSun: 0.5,
+}
+
+/**
+ * ToF distance used for "can see".
+ * A measured row for this material replaces the square-root formula.
+ * Ambient light then multiplies that distance. Radar is unchanged.
+ */
+export function tofSeeingRange_m(
+  spec: SensorSpec,
+  material: string,
+  reflectivity: number,
+  ambient: AmbientLight,
+): number {
+  if (!spec.tof) {
+    return Math.max(0, spec.rangeMax_m)
+  }
+  const measured = spec.measuredRanges?.find((row) => row.material === material)
+  const fromFormula = effectiveMax_m(spec.rangeMax_m, reflectivity, spec.tof.referenceReflectivity)
+  const base =
+    measured && Number.isFinite(measured.rangeMax_m)
+      ? Math.max(0, measured.rangeMax_m)
+      : (fromFormula ?? Math.max(0, spec.rangeMax_m))
+  return base * AMBIENT_RANGE_FACTOR[ambient]
 }
 
 /**

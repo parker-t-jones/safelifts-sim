@@ -27,7 +27,7 @@ export function sensorAssumptions(): ModelAssumption[] {
     {
       title: 'Effective max range',
       detail:
-        'effectiveMax is rangeMax times the square root of reflectivity over the reference reflectivity, and it never exceeds rangeMax. A reference reflectivity of 0 is rejected. The material table is approximate.',
+        'Returned signal is proportional to ρ / d², so range scales with the square root of the reflectivity ratio, not linearly. effectiveMax(ρ) = rangeMax × √(ρ / ρ_ref), and it never exceeds rangeMax. ρ is the target reflectivity. ρ_ref is the reference reflectivity, and a value of 0 is rejected. The material table is approximate. A measured max-range row on the sensor, when filled in, replaces this formula for that material. That row is the indoor range.',
     },
     {
       title: 'Frames to confirm',
