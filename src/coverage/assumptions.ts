@@ -60,6 +60,11 @@ export function coverageAssumptions(): ModelAssumption[] {
         'Indoor, overcast, and direct sun multiply the ToF range by 1, 0.75, and 0.5 after the material range is known. These factors are approximate stand-ins, not datasheet numbers. Indoor is the lighting assumed by rangeMax and by a measured table. Radar is not scaled.',
     },
     {
+      title: 'In-time reach from the mount',
+      detail:
+        'The warning distance is measured from the lift’s front or rear surface, not from the sensor. A mount behind that surface has to see the warning distance plus that setback. The panel lists the warning distance and each sensor’s effective reach for the material and light you picked. It flags a sensor when that reach is shorter, with the sentence “cannot give in-time warning from this mount”. The surfaces are the outermost chassis, deck, basket, and module faces, including the extension deck. A sensor that does not aim forward or back is listed with its reach and is not flagged this way.',
+    },
+    {
       title: 'Height chart',
       detail:
         'Stowed, the elevated threshold, and max height use the spacing you picked. The curve between them uses a 10 cm grid, or your spacing if that is already coarser, so the chart does not repeat the fine grid at every height.',

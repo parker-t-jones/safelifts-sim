@@ -3,6 +3,7 @@
  * can see in time to stop. Self-occlusion is listed beside that, not inside it.
  */
 import { coverageAssumptions } from '../coverage/assumptions'
+import { IN_TIME_MOUNT_FLAG, sensorReachReport } from '../coverage/reach'
 import { OPERATOR_PRESET_LABELS, OPERATOR_PRESETS } from '../coverage/operator'
 import { plannedHeights } from '../coverage/plan'
 import {
@@ -22,9 +23,15 @@ import {
   AMBIENT_LIGHTS,
   AMBIENT_RANGE_FACTOR,
   APPROXIMATE_MATERIALS,
+  materialByName,
+  type AmbientLight,
 } from '../sensors/derived'
+import type { DisplayUnitSystem } from '../units/types'
 import { useCoverageStore } from '../state/coverageStore'
 import { useLiftStore } from '../state/liftStore'
+import { useModuleStore } from '../state/moduleStore'
+import { usePlacementStore } from '../state/placementStore'
+import { useSensorStore } from '../state/sensorStore'
 import { useUiStore } from '../state/uiStore'
 import { inchesToMeters, metersToInches } from '../units/convert'
 import { formatLength } from '../units/format'
@@ -231,6 +238,13 @@ export function CoveragePanel() {
         </p>
       </section>
 
+      <ReachVersusWarning
+        platformHeight_m={selectedHeight}
+        targetMaterial={targetMaterial}
+        ambientLight={ambientLight}
+        unitSystem={unitSystem}
+      />
+
       {report ? <RegionTable report={report} /> : null}
       {report ? <Details report={report} unitSystem={unitSystem} /> : null}
 
@@ -359,6 +373,81 @@ export function CoveragePanel() {
         </ul>
       </details>
     </div>
+  )
+}
+
+function ReachVersusWarning(props: {
+  platformHeight_m: number
+  targetMaterial: string
+  ambientLight: AmbientLight
+  unitSystem: DisplayUnitSystem
+}) {
+  const spec = useLiftStore((state) => state.spec)
+  const modules = useModuleStore((state) => state.modules)
+  const placements = usePlacementStore((state) => state.placements)
+  const sensorSpecs = useSensorStore((state) => state.specs)
+  const material = materialByName(props.targetMaterial)
+  const report = sensorReachReport({
+    spec,
+    platformHeight_m: props.platformHeight_m,
+    modules,
+    placements,
+    sensorSpecs,
+    targetMaterial: material.name,
+    targetReflectivity: material.reflectivity,
+    ambientLight: props.ambientLight,
+  })
+
+  return (
+    <section className="flex flex-col gap-2">
+      <h3 className="text-sm font-medium text-zinc-200">Reach versus warning</h3>
+      <p className="text-xs leading-relaxed text-zinc-500">
+        Warning distance at {formatLength(props.platformHeight_m, props.unitSystem)}, for {material.name},{' '}
+        {AMBIENT_LABELS[props.ambientLight].toLowerCase()} light. Reach is how far that sensor can see
+        that material. A mount behind the front or rear surface has to cover the warning distance plus
+        that setback.
+      </p>
+      {report.sensors.length === 0 ? (
+        <p className="text-sm text-zinc-400">No enabled sensor.</p>
+      ) : (
+        <table className="w-full text-left text-xs text-zinc-300">
+          <thead>
+            <tr className="text-zinc-500">
+              <th className="py-1 font-medium">Sensor</th>
+              <th className="py-1 font-medium">Warning distance</th>
+              <th className="py-1 font-medium">Reach</th>
+            </tr>
+          </thead>
+          <tbody>
+            {report.sensors.map((sensor) => (
+              <tr key={`${sensor.placementId}-${sensor.sensorId}`} className="border-t border-zinc-800 align-top">
+                <td className="py-1 pr-2">
+                  {sensor.label}
+                  {sensor.flagged ? (
+                    <p className="mt-1 text-amber-200">{IN_TIME_MOUNT_FLAG}</p>
+                  ) : null}
+                  {sensor.face ? (
+                    <p className="mt-1 text-zinc-500">
+                      {formatLength(sensor.setback_m, props.unitSystem)} behind the {sensor.face} surface
+                      {sensor.needed_m !== null
+                        ? `, so it needs ${formatLength(sensor.needed_m, props.unitSystem)}`
+                        : ''}
+                      .
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-zinc-500">Not aimed at the front or rear.</p>
+                  )}
+                </td>
+                <td className="py-1 pr-2">
+                  {report.warning_m === null ? 'none' : formatLength(report.warning_m, props.unitSystem)}
+                </td>
+                <td className="py-1">{formatLength(sensor.reach_m, props.unitSystem)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </section>
   )
 }
 
