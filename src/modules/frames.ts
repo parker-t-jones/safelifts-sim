@@ -60,6 +60,21 @@ export interface MountPose {
 }
 
 /**
+ * Reflect a mount through the module's forward-up plane (negate Z).
+ * Reflection sends yaw and roll to their opposites and leaves pitch alone,
+ * because pitch is a tilt toward the ground and that still points down
+ * after a left-right flip. The template stays as authored.
+ */
+export function mirrorMount(pose: MountPose): MountPose {
+  const [x, y, z] = pose.position_m
+  const [yaw, pitch, roll] = pose.yawPitchRoll_deg
+  return {
+    position_m: [x, y, -z],
+    yawPitchRoll_deg: [-yaw, pitch, -roll],
+  }
+}
+
+/**
  * A point in one sensor's frame, expressed in the world.
  * Sensor pose is inside the module. Module pose is in the chassis (lift)
  * frame or the platform frame. Platform Y then shifts up by the platform height.
@@ -67,11 +82,12 @@ export interface MountPose {
 export function sensorPointToWorld(args: {
   pointInSensor_m: readonly [number, number, number]
   sensor: MountPose
-  placement: MountPose & { attachTo: AttachTarget }
+  placement: MountPose & { attachTo: AttachTarget; mirrored?: boolean }
   platformHeight_m: number
   pose: { x_m: number; z_m: number; yaw_rad: number }
 }): [number, number, number] {
-  const inModule = transformPoint(args.pointInSensor_m, args.sensor.position_m, args.sensor.yawPitchRoll_deg)
+  const sensor = args.placement.mirrored ? mirrorMount(args.sensor) : args.sensor
+  const inModule = transformPoint(args.pointInSensor_m, sensor.position_m, sensor.yawPitchRoll_deg)
   const inAttach = transformPoint(inModule, args.placement.position_m, args.placement.yawPitchRoll_deg)
   const inLift: [number, number, number] =
     args.placement.attachTo === 'platform'

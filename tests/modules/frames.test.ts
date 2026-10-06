@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest'
 import { Euler, Matrix4, Vector3 } from 'three'
 import { SIX_CLUSTER_MODULE } from '../../src/modules/preset'
-import { rotateMount, sensorPointToWorld, transformPoint } from '../../src/modules/frames'
+import { mirrorMount, rotateMount, sensorPointToWorld, transformPoint } from '../../src/modules/frames'
 import { mountMatrix, poseFromMatrix } from '../../src/modules/mountMatrix'
 import { degreesToRadians } from '../../src/units/convert'
 
@@ -125,5 +125,59 @@ describe('6× cluster preset', () => {
     const right = SIX_CLUSTER_MODULE.sensors.find((sensor) => sensor.name === 'Top right')
     expect(left && left.position_m[2]).toBeLessThan(0)
     expect(right && right.position_m[2]).toBeGreaterThan(0)
+  })
+})
+
+describe('mirrorMount', () => {
+  it('turns the left sensor of the cluster into the right one', () => {
+    const left = SIX_CLUSTER_MODULE.sensors.find((sensor) => sensor.name === 'Top left')
+    const right = SIX_CLUSTER_MODULE.sensors.find((sensor) => sensor.name === 'Top right')
+    if (!left || !right) {
+      throw new Error('cluster is missing a side sensor')
+    }
+    const mirrored = mirrorMount(left)
+    expect(mirrored.position_m[0]).toBeCloseTo(right.position_m[0], 8)
+    expect(mirrored.position_m[1]).toBeCloseTo(right.position_m[1], 8)
+    expect(mirrored.position_m[2]).toBeCloseTo(right.position_m[2], 8)
+    expect(mirrored.yawPitchRoll_deg[0]).toBeCloseTo(right.yawPitchRoll_deg[0], 8)
+    expect(mirrored.yawPitchRoll_deg[1]).toBe(0)
+  })
+
+  it('keeps a downward pitch and flips the roll', () => {
+    const mirrored = mirrorMount({
+      position_m: [0.02, -0.02, -0.04],
+      yawPitchRoll_deg: [45, -45, 10],
+    })
+    expect(mirrored.yawPitchRoll_deg).toEqual([-45, -45, -10])
+    const [x, y, z] = rotateMount([1, 0, 0], mirrored.yawPitchRoll_deg)
+    expect(y).toBeLessThan(0)
+    expect(z).toBeGreaterThan(0)
+    expect(x).toBeGreaterThan(0)
+  })
+
+  it('places the mirrored sensor on the other side of the module', () => {
+    const plain = sensorPointToWorld({
+      pointInSensor_m: [0, 0, 0],
+      sensor: { position_m: [0, 0, -0.04], yawPitchRoll_deg: [45, 0, 0] },
+      placement: { position_m: [1, 2, 0], yawPitchRoll_deg: [0, 0, 0], attachTo: 'chassis' },
+      platformHeight_m: 0,
+      pose: { x_m: 0, z_m: 0, yaw_rad: 0 },
+    })
+    const mirrored = sensorPointToWorld({
+      pointInSensor_m: [0, 0, 0],
+      sensor: { position_m: [0, 0, -0.04], yawPitchRoll_deg: [45, 0, 0] },
+      placement: {
+        position_m: [1, 2, 0],
+        yawPitchRoll_deg: [0, 0, 0],
+        attachTo: 'chassis',
+        mirrored: true,
+      },
+      platformHeight_m: 0,
+      pose: { x_m: 0, z_m: 0, yaw_rad: 0 },
+    })
+    expect(plain[2]).toBeCloseTo(-0.04, 8)
+    expect(mirrored[2]).toBeCloseTo(0.04, 8)
+    expect(mirrored[0]).toBeCloseTo(plain[0], 8)
+    expect(mirrored[1]).toBeCloseTo(plain[1], 8)
   })
 })

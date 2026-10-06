@@ -9,6 +9,7 @@ import { Euler } from 'three'
 import { SensorFrustum } from '../sensors/SensorFrustum'
 import { useSensorStore } from '../state/sensorStore'
 import { degreesToRadians } from '../units/convert'
+import { mirrorMount } from './frames'
 import type { SensorModule } from './types'
 
 /** Preview pyramids are this long so six of them fit in the small view. */
@@ -26,6 +27,8 @@ export function ModuleVisual(props: {
   showRays: boolean
   /** When set, every pyramid uses this length instead of the sensor max range. */
   previewRange_m?: number
+  /** Flip sensors left-to-right. The housing box is centered, so it looks the same. */
+  mirrored?: boolean
   namePrefix?: string
 }) {
   const specs = useSensorStore((state) => state.specs)
@@ -39,11 +42,14 @@ export function ModuleVisual(props: {
       </mesh>
       {module.sensors.map((sensor, index) => {
         const spec = specs.find((item) => item.id === sensor.sensorSpecId) ?? null
+        const pose = props.mirrored
+          ? mirrorMount({ position_m: sensor.position_m, yawPitchRoll_deg: sensor.yawPitchRoll_deg })
+          : { position_m: sensor.position_m, yawPitchRoll_deg: sensor.yawPitchRoll_deg }
         return (
           <MountedSensor
             key={sensor.id}
-            position_m={sensor.position_m}
-            yawPitchRoll_deg={sensor.yawPitchRoll_deg}
+            position_m={pose.position_m}
+            yawPitchRoll_deg={pose.yawPitchRoll_deg}
             name={props.namePrefix ? `${props.namePrefix}-${sensor.id}` : sensor.id}
           >
             {spec && props.showFrustums ? (
@@ -68,8 +74,8 @@ export function ModuleVisual(props: {
 }
 
 function MountedSensor(props: {
-  position_m: [number, number, number]
-  yawPitchRoll_deg: [number, number, number]
+  position_m: readonly [number, number, number]
+  yawPitchRoll_deg: readonly [number, number, number]
   name?: string
   children: ReactNode
 }) {

@@ -130,12 +130,18 @@ function PlacementRow(props: {
     >
       <button type="button" className="text-left text-sm text-zinc-100" onClick={props.onSelect}>
         {module?.name ?? 'Missing module'} · {props.placement.attachTo}
+        {props.placement.mirrored ? ' · mirrored' : ''}
         {props.placement.snapPointId ? '' : ' · free'}
       </button>
       <Check
         label="Enabled"
         checked={props.placement.enabled}
         onChange={(enabled) => updatePlacement(props.placement.id, { enabled })}
+      />
+      <Check
+        label="Mirror left-right"
+        checked={Boolean(props.placement.mirrored)}
+        onChange={(mirrored) => updatePlacement(props.placement.id, { mirrored })}
       />
       {module && <ModuleWarning module={module} />}
     </div>
@@ -170,6 +176,16 @@ function PlacementEditor(props: { placement: ModulePlacement; snaps: SnapPoint[]
           ))}
         </select>
       </label>
+      <Check
+        label="Mirror left-right"
+        checked={Boolean(placement.mirrored)}
+        onChange={(mirrored) => updatePlacement(placement.id, { mirrored })}
+      />
+      <p className="text-xs leading-relaxed text-zinc-500">
+        Flips this copy across the module’s forward axis. Use it on the right corner so that
+        cluster matches the left one. Pitch stays the same. Yaw and roll change sign. The template
+        itself is not edited.
+      </p>
       <label className="flex flex-col gap-1 text-xs text-zinc-400">
         Attach to
         <select

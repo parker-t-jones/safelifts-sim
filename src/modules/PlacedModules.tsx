@@ -85,6 +85,7 @@ function PlacedModule(props: { placementId: string }) {
           module={module}
           showFrustums={placement.enabled && showFrustums}
           showRays={placement.enabled && showZoneRays}
+          mirrored={placement.mirrored}
           namePrefix={placement.id}
         />
       ) : null}

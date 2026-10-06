@@ -44,6 +44,7 @@ export const usePlacementStore = create<PlacementState>((set, get) => ({
       position_m: snap ? [...snap.position_m] : [spec.chassisLength_m / 2, spec.chassisHeight_m, 0],
       yawPitchRoll_deg: [0, 0, 0],
       enabled: true,
+      mirrored: false,
       snapPointId: snap?.id ?? null,
     }
     set({ placements: [...get().placements, placement], selectedId: placement.id })

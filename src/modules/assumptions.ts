@@ -40,6 +40,11 @@ export function placementAssumptions(): ModelAssumption[] {
         'Choosing a snap point copies that point and attaches the module to the chassis or the platform, whichever the point belongs to. Typing a position or dragging the gizmo clears the snap. Resizing the lift does not move a module that was already placed; snap it again to follow the new corner.',
     },
     {
+      title: 'Mirror',
+      detail:
+        'Mirror flips one placement left-to-right through the module’s forward-up plane. Sensor positions swap sides. Yaw and roll change sign. Pitch stays, so a downward sensor still looks down. The template is unchanged, which lets the right corner use the same cluster as the left.',
+    },
+    {
       title: 'Platform height',
       detail:
         'A platform placement lives in the platform frame, so it rises and falls with the platform. A chassis placement stays on the chassis.',
