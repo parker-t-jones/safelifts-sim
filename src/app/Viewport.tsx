@@ -6,9 +6,11 @@ import { Canvas } from '@react-three/fiber'
 import { CameraRig } from './Cameras'
 import { DriveLoop } from '../lift/DriveLoop'
 import { LiftModel } from '../lift/LiftModel'
+import { SceneView } from '../scene/Obstacles'
 import { brakeDecel_mps2, driveIsDisabled, stoppingDistance_m } from '../lift/kinematics'
 import { formatLength, formatSpeed, formatSteer } from '../units/format'
 import { useLiftStore } from '../state/liftStore'
+import { useSceneStore } from '../state/sceneStore'
 import { useUiStore } from '../state/uiStore'
 import type { CameraMode } from '../state/uiStore'
 
@@ -42,6 +44,7 @@ export function Viewport() {
       brakeDecel_mps2(state.spec, state.pose.platformHeight_m),
     ),
   )
+  const colliding = useSceneStore((state) => state.contactIds.length > 0)
 
   return (
     <div className="relative min-h-0 min-w-0 flex-1">
@@ -56,6 +59,7 @@ export function Viewport() {
           args: total size in meters, number of cells, centerline color, cell color.
         */}
         <gridHelper args={[GRID_SIZE_M, GRID_CELLS_PER_SIDE, '#94a3b8', '#334155']} />
+        <SceneView />
         <LiftModel />
       </Canvas>
       <div className="pointer-events-none absolute inset-0">
@@ -90,6 +94,7 @@ export function Viewport() {
             Straight-line stopping distance:{' '}
             {stopping_m === null ? 'braking rate is zero' : formatLength(stopping_m, unitSystem)}
           </p>
+          {colliding ? <p className="text-red-300">Collision</p> : null}
           {driveDisabled && maxDriveHeight_m !== null && (
             <p className="text-amber-200">
               Drive disabled above {formatLength(maxDriveHeight_m, unitSystem)}

@@ -82,7 +82,8 @@ export function liftAssumptions(): ModelAssumption[] {
     },
     {
       title: 'Collisions',
-      detail: 'The lift does not stop for obstacles yet. Nothing is in the scene to hit.',
+      detail:
+        'Driving into an obstacle stops the lift at the last clear pose and sets speed to zero. The Scene tab lists the COLLISION line and explains the overlap test.',
     },
   ]
 }

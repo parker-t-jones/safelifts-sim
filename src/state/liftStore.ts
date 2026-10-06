@@ -19,6 +19,8 @@ interface LiftState {
   setShowSnapPoints: (showSnapPoints: boolean) => void
   resetApproximatePreset: () => void
   step: (command: DriveCommand, dt_s: number) => void
+  /** Put the pose back after a collision rejects the step. */
+  replacePose: (pose: LiftPose) => void
 }
 
 export const useLiftStore = create<LiftState>((set, get) => ({
@@ -59,6 +61,8 @@ export const useLiftStore = create<LiftState>((set, get) => ({
       pose: stepLift(pose, spec, nextMemory.applied, dt_s),
     })
   },
+
+  replacePose: (pose) => set({ pose }),
 }))
 
 /** Keep height and steer inside the spec after a number edit. */

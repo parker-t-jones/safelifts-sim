@@ -10,6 +10,7 @@ import { forwardXZ } from '../lift/frames'
 import { OPERATOR_EYE_HEIGHT_M } from '../lift/visual'
 import { useLiftStore } from '../state/liftStore'
 import { usePlacementStore } from '../state/placementStore'
+import { useSceneStore } from '../state/sceneStore'
 import type { CameraMode } from '../state/uiStore'
 
 const CHASE_BACK_M = 6
@@ -55,11 +56,12 @@ function OrbitFollow() {
   const z_m = useLiftStore((state) => state.pose.z_m)
   const platformHeight_m = useLiftStore((state) => state.pose.platformHeight_m)
   const gizmoDragging = usePlacementStore((state) => state.gizmoDragging)
+  const sceneDragging = useSceneStore((state) => state.gizmoDragging)
   return (
     <OrbitControls
       // Damping would lag behind a moving target and feel like the lift is slipping.
       enableDamping={false}
-      enabled={!gizmoDragging}
+      enabled={!gizmoDragging && !sceneDragging}
       maxPolarAngle={Math.PI / 2.05}
       target={[x_m, Math.min(platformHeight_m * 0.35, 2), z_m]}
     />

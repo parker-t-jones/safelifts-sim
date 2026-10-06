@@ -2,8 +2,10 @@
  * Right-hand panel. Lift edits the machine. Sensors edits the library.
  * Modules edits housings. Placement puts a housing on the lift.
  * Coverage reports what those sensors can see.
+ * Scene places the obstacles the lift can drive into.
  */
 import { CoveragePanel } from '../ui/CoveragePanel'
+import { ScenePanel } from '../ui/ScenePanel'
 import { ModulesPanel } from '../ui/ModulesPanel'
 import { PlacementPanel } from '../ui/PlacementPanel'
 import { LiftPanel } from '../ui/LiftPanel'
@@ -49,6 +51,8 @@ export function SidePanel() {
           <PlacementPanel />
         ) : activeTab === 'Coverage' ? (
           <CoveragePanel />
+        ) : activeTab === 'Scene' ? (
+          <ScenePanel />
         ) : (
           <div className="flex flex-col gap-2">
             <h2 className="text-base font-medium">{activeTab}</h2>
