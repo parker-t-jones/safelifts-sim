@@ -17,6 +17,7 @@ alwaysApply: true
   1. Run `npm test` and `npm run build` and fix any failures.
   2. Give a short plain-English summary of what changed.
   3. Give step-by-step instructions for checking the result in the browser (what to click, what should appear).
+- After every change the developer approves, commit it with a clear message, then push that commit. Tag each finished milestone `m4`, `m5`, and so on. End every report with the commit hashes and whether they are pushed. Never leave approved work uncommitted at the end of a report.
 - If the request is ambiguous or conflicts with SPEC.md, ask before guessing.
 
 ## Code conventions
