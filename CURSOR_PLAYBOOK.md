@@ -22,7 +22,7 @@ Step-by-step instructions for building the simulator with Cursor. Do the milesto
 
 - **Paste one milestone prompt at a time.** Wait until it finishes and you've checked the result before moving on.
 - **Approve commands** when Cursor asks to run them (`npm install`, `npm test`, etc.).
-- **Start the app:** in Cursor's terminal (**Ctrl + `**), run `npm run dev`, then open the link it prints (usually http://localhost:5173). Leave it running; the page updates as Cursor changes code.
+- **Start the app:** in Cursor's terminal (**Ctrl + **), run `npm run dev`, then open the link it prints (usually http://localhost:5173). Leave it running; the page updates as Cursor changes code.
 - **Save your progress after every milestone** (this lets you undo if something breaks). Paste this into the chat:
   > Commit all changes to git with a message describing this milestone.
 - **If something breaks:** copy the error (from the terminal or the browser console: right-click the page → Inspect → Console) and paste it into the chat with "This error appears when I [what you did]. Fix it."
